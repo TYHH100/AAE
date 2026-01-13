@@ -501,8 +501,8 @@ class AzureArchiveTool:
         self.entry_size.delete(0, tk.END); self.entry_size.insert(0, "60")
         self.entry_ruby.delete(0, tk.END)
         self.entry_alpha.delete(0, tk.END)
-        self.txt_dialogue.delete("1.0", tk.END)
-        self.txt_dialogue.insert("1.0", "在这里输入对话文本...")
+        #self.txt_dialogue.delete("1.0", tk.END)
+        #self.txt_dialogue.insert("1.0", "在这里输入对话文本...")
 
 if __name__ == "__main__":
     root = tk.Tk()
