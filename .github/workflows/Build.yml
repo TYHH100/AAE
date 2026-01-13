@@ -1,11 +1,9 @@
-name: Build
+name: dev Test
 
 on:
   push:
-    tags:
-      - 'v*'
-  release:
-    types: [published]
+    branches:
+      - dev
 
 env:
   PYTHON_VERSION: '3.12'
@@ -18,10 +16,10 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
     
     - name: Set up Python ${{ env.PYTHON_VERSION }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ env.PYTHON_VERSION }}
     
@@ -47,7 +45,7 @@ jobs:
         }
     
     - name: Upload Windows build artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: AA-额外指令生成器-windows
         path: dist/
@@ -59,10 +57,10 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
     
     - name: Set up Python ${{ env.PYTHON_VERSION }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ env.PYTHON_VERSION }}
     
@@ -87,104 +85,8 @@ jobs:
         fi
     
     - name: Upload Linux build artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: AA-额外指令生成器-linux
         path: dist/
         retention-days: 30
-
-  build-macos:
-    name: Build macOS Executable
-    runs-on: macos-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Set up Python ${{ env.PYTHON_VERSION }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    
-    - name: Build with PyInstaller
-      run: |
-        pyinstaller app.spec
-    
-    - name: Verify executable
-      run: |
-        if [ -f "dist/AA-额外指令生成器" ]; then
-            echo "Executable built successfully"
-            ls -la dist/AA-额外指令生成器
-            file dist/AA-额外指令生成器
-        else
-            echo "Executable not found"
-            exit 1
-        fi
-    
-    - name: Upload macOS build artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: AA-额外指令生成器-macos
-        path: dist/
-        retention-days: 30
-
-  release:
-    name: Create Release
-    runs-on: ubuntu-latest
-    needs: [build-windows, build-linux, build-macos]
-    if: |
-      (github.event_name == 'release' && github.event.action == 'published') ||
-      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Download Windows build artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: AA-额外指令生成器-windows
-        path: dist/windows/
-    
-    - name: Download Linux build artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: AA-额外指令生成器-linux
-        path: dist/linux/
-    
-    - name: Download macOS build artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: AA-额外指令生成器-macos
-        path: dist/macos/
-
-    - name: Create ZIP packages
-      run: |
-        mkdir -p dist
-        if [ -d "dist/windows" ]; then
-          zip -r -j dist/windows.zip dist/windows/* || true
-        fi
-        if [ -d "dist/linux" ]; then
-          zip -r -j dist/linux.zip dist/linux/* || true
-        fi
-        if [ -d "dist/macos" ]; then
-          zip -r -j dist/macos.zip dist/macos/* || true
-        fi
-    
-    - name: Create Release
-      uses: softprops/action-gh-release@v2
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        tag_name: ${{github.ref_name}}
-        name: Releases ${{github.ref_name}}
-        draft: true
-        #prerelease: false
-        files: |
-          dist/windows.zip
-          dist/linux.zip
-          dist/macos.zip
