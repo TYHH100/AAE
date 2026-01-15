@@ -124,8 +124,8 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_name: ${{github.ref_name}}
         name: Releases ${{github.ref_name}}
-        draft: true
+        #draft: true
         #prerelease: false
         files: |
-          dist/AA-额外指令生成器-windows.zip
-          dist/AA-额外指令生成器-linux.zip
+          dist/windows.zip
+          dist/linux.zip
