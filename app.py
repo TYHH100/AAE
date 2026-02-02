@@ -5,6 +5,34 @@ import configparser
 import os
 import sys
 import webbrowser
+from tkinter import font
+
+class ToolTip:
+    def __init__(self, widget, text):
+        self.widget = widget
+        self.text = text
+        self.tip_window = None
+        widget.bind("<Enter>", self.show_tip)
+        widget.bind("<Leave>", self.hide_tip)
+
+    def show_tip(self, event=None):
+        if self.tip_window or not self.text:
+            return
+        x, y, cx, cy = self.widget.bbox("insert")
+        x = x + self.widget.winfo_rootx() + 25
+        y = y + self.widget.winfo_rooty() + 25
+        self.tip_window = tw = tk.Toplevel(self.widget)
+        tw.wm_overrideredirect(True)
+        tw.wm_geometry(f"+{x}+{y}")
+        label = tk.Label(tw, text=self.text, justify=tk.LEFT,
+                         background="#ffffe0", relief=tk.SOLID, borderwidth=1,
+                         font=("tahoma", "8", "normal"))
+        label.pack(ipadx=1)
+
+    def hide_tip(self, event=None):
+        if self.tip_window:
+            self.tip_window.destroy()
+            self.tip_window = None
 
 class AzureArchiveTool:
     def __init__(self, root):
@@ -22,6 +50,10 @@ class AzureArchiveTool:
         # 定义常用颜色和字体
         self.font_family = tk.StringVar(value="Microsoft YaHei UI")
         self.font_size = tk.StringVar(value="10")
+        
+        # 检查字体可用性并设置合适的字体
+        self.check_font_availability()
+        
         self.font_main = (self.font_family.get(), int(self.font_size.get()))
         self.font_bold = (self.font_family.get(), int(self.font_size.get()), "bold")
         
@@ -308,6 +340,8 @@ class AzureArchiveTool:
             ttk.Radiobutton(radio_frame, text="隐藏菜单 (#hidemenu)", variable=self.menu_var, value="#hidemenu").pack(side="left", padx=10)
             ttk.Radiobutton(radio_frame, text="显示菜单 (#showmenu)", variable=self.menu_var, value="#showmenu").pack(side="left", padx=10)
             add_row(0, "操作:", radio_frame)
+            ttk.Label(self.input_frame_container, text="提示:").grid(row=1, column=0, sticky="e", padx=10)
+            ttk.Label(self.input_frame_container, text="只影响, 鉴赏模式中右上角那Auto和Menu这两个选项", foreground="gray").grid(row=1, column=1, sticky="w")
 
     def add_command(self):
         # 逻辑保持不变
@@ -452,12 +486,14 @@ class AzureArchiveTool:
         self.entry_size = ttk.Entry(color_frame, width=8)
         self.entry_size.insert(0, "60")
         self.entry_size.grid(row=1, column=1, sticky="ew", padx=2)
+        ToolTip(self.entry_size, "范围: 1-248\n超过这个范围的文本框已经无法显示需要使用屏幕文字\n示例文字, 在最大248刚好撑满整个聊天框不过后面三个点, 只会显示一个")
         ttk.Button(color_frame, text="应用", width=4, command=self.apply_size).grid(row=1, column=3)
         
         # 透明度行
         ttk.Label(color_frame, text="透明:").grid(row=2, column=0)
         self.entry_alpha = ttk.Entry(color_frame, width=8)
         self.entry_alpha.grid(row=2, column=1, sticky="ew", padx=2)
+        ToolTip(self.entry_alpha, "范围: 00-99\n也可以使用 a-f + 0-9")
         ttk.Button(color_frame, text="应用", width=4, command=self.apply_alpha).grid(row=2, column=3)
 
         # 3. 高级与其他
@@ -539,6 +575,26 @@ class AzureArchiveTool:
     def apply_alpha(self):
         alpha = self.entry_alpha.get()
         if not alpha: return
+        try:
+            # 检查是否是两位十六进制值
+            if len(alpha) == 2:
+                # 尝试转换为十六进制
+                alpha_hex = int(alpha, 16)
+                # 十六进制范围是 00-FF (0-255)
+                if 0 <= alpha_hex <= 255:
+                    pass
+                else:
+                    messagebox.showwarning("警告", "透明度值必须是 A-F + 0-9 或 00-99")
+                    return
+            else:
+                # 尝试转换为十进制
+                alpha_num = int(alpha)
+                if alpha_num < 10 or alpha_num > 99:
+                    messagebox.showwarning("警告", "透明度值必须是 A-F + 0-9 或 00-99")
+                    return
+        except ValueError:
+            messagebox.showwarning("警告", "请输入有效的值 (A-F + 0-9 或 00-99)")
+            return
         sel = self.get_selection()
         if sel: self.replace_selection(f"[{alpha}]{sel}")
         else: self.insert_text(f"[{alpha}]")
@@ -790,10 +846,11 @@ class AzureArchiveTool:
     
     def read_version(self):
         try:
-            if hasattr(sys, '_MEIPASS'):
+            meipass = getattr(sys, '_MEIPASS', None)
+            if meipass:
                 version_path = os.path.join(os.path.dirname(os.path.abspath(sys.executable)), "version")
                 if not os.path.exists(version_path):
-                    version_path = os.path.join(sys._MEIPASS, "version")
+                    version_path = os.path.join(meipass, "version")
             else:
                 version_path = "version"
             
@@ -986,6 +1043,23 @@ class AzureArchiveTool:
         self.entry_alpha.delete(0, tk.END)
         #self.txt_dialogue.delete("1.0", tk.END)
         #self.txt_dialogue.insert("1.0", "在这里输入对话文本...")
+
+    def check_font_availability(self):
+        # 检查字体可用性并设置合适的字体
+        available_fonts = font.families()
+        desired_font = self.font_family.get()
+        
+        if desired_font not in available_fonts:
+            # 尝试其他常用中文字体
+            fallback_fonts = ["SimHei", "Microsoft YaHei", "Arial Unicode MS", "sans-serif"]
+            
+            for fallback in fallback_fonts:
+                if fallback in available_fonts:
+                    self.font_family.set(fallback)
+                    return
+            
+            # 如果没有找到中文字体，使用系统默认字体
+            self.font_family.set("sans-serif")
 
 if __name__ == "__main__":
     root = tk.Tk()

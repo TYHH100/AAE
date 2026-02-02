@@ -207,4 +207,8 @@ marimo/_lsp/
 __marimo__/
 
 
+kivy_aae/
+log/
+logs/
+
 config.ini
