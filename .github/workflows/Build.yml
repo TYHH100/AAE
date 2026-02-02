@@ -1,4 +1,4 @@
-name: Build
+name: Build and Release
 
 on:
   push:
@@ -34,23 +34,16 @@ jobs:
       run: |
         pyinstaller app.spec
     
-    - name: Verify executable
+    - name: Package as zip
       run: |
-        if (Test-Path "dist/AA-额外指令生成器.exe") {
-            Write-Host "Executable built successfully"
-            $file = Get-Item "dist/AA-额外指令生成器.exe"
-            Write-Host "File size: $($file.Length) bytes"
-            Write-Host "Last modified: $($file.LastWriteTime)"
-        } else {
-            Write-Error "Executable not found"
-            exit 1
-        }
+        cd dist
+        Compress-Archive -Path "AA-额外指令生成器.exe" -DestinationPath "windows.zip"
     
     - name: Upload Windows build artifact
       uses: actions/upload-artifact@v6
       with:
-        name: AA-额外指令生成器-windows
-        path: dist/
+        name: windows-build
+        path: dist/windows.zip
         retention-days: 30
 
   build-linux:
@@ -75,22 +68,16 @@ jobs:
       run: |
         pyinstaller app.spec
     
-    - name: Verify executable
+    - name: Package as zip
       run: |
-        if [ -f "dist/AA-额外指令生成器" ]; then
-            echo "Executable built successfully"
-            ls -la dist/AA-额外指令生成器
-            file dist/AA-额外指令生成器
-        else
-            echo "Executable not found"
-            exit 1
-        fi
+        cd dist
+        zip -r linux.zip "AA-额外指令生成器"
     
     - name: Upload Linux build artifact
       uses: actions/upload-artifact@v6
       with:
-        name: AA-额外指令生成器-linux
-        path: dist/
+        name: linux-build
+        path: dist/linux.zip
         retention-days: 30
 
   release:
@@ -102,30 +89,24 @@ jobs:
       (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v6
-    
     - name: Download Windows build artifact
       uses: actions/download-artifact@v6
       with:
-        name: AA-额外指令生成器-windows
-        path: dist/windows/
+        name: windows-build
+        path: dist/
     
     - name: Download Linux build artifact
       uses: actions/download-artifact@v6
       with:
-        name: AA-额外指令生成器-linux
-        path: dist/linux/
+        name: linux-build
+        path: dist/
 
- 
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_name: ${{github.ref_name}}
-        name: Releases ${{github.ref_name}}
-        #draft: true
-        #prerelease: false
+        tag_name: ${{ github.ref_name }}
+        name: Release ${{ github.ref_name }}
         files: |
           dist/windows.zip
           dist/linux.zip
