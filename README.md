@@ -11,8 +11,8 @@
 然后再打开应用即可
 
 # 预览图
-![](https://raw.githubusercontent.com/TYHH100/AAE/refs/heads/main/images/9d8bf344-1f3c-4a2e-a0e1-8391db4d9dd0.png)
-![](https://raw.githubusercontent.com/TYHH100/AAE/refs/heads/main/images/8b91c1b4-3799-4969-ac16-142ee1d5c041.png)
+![](https://raw.githubusercontent.com/TYHH100/AAE/refs/heads/main/images/2e7607ab-02f6-4592-be43-adead8cb4391.png)
+![](https://raw.githubusercontent.com/TYHH100/AAE/refs/heads/main/images/QQ20260217-145435.png)
 
 # 干嘛整这种东西？
 我不道啊, 硬要说就是</br>

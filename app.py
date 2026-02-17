@@ -26,7 +26,7 @@ class ToolTip:
         tw.wm_geometry(f"+{x}+{y}")
         label = tk.Label(tw, text=self.text, justify=tk.LEFT,
                          background="#ffffe0", relief=tk.SOLID, borderwidth=1,
-                         font=("tahoma", "8", "normal"))
+                         font=("tahoma", 8, "normal"))
         label.pack(ipadx=1)
 
     def hide_tip(self, event=None):
@@ -251,14 +251,49 @@ class AzureArchiveTool:
             ttk.Label(coord_frame, text="Y:").pack(side="left", padx=(10, 2))
             self.inputs['y'].pack(side="left", padx=2)
             
+            # 添加坐标选择按钮
+            select_btn = ttk.Button(coord_frame, text="选择", 
+                                  command=lambda: self.open_coordinate_selector(self.inputs['x'], self.inputs['y'], 
+                                                                                is_center_aligned=True, invert_y=False, invert_x=True))
+            select_btn.pack(side="left", padx=10)
+            
             add_row(1, "中心坐标:", coord_frame)
 
             # 缩放系数
             scale_frame = ttk.Frame(self.input_frame_container)
+            
+            # 输入框
             self.inputs['scale'] = ttk.Entry(scale_frame, width=12)
             self.inputs['scale'].insert(0, "3160")
             self.inputs['scale'].pack(side="left")
+            
+            # 预设下拉菜单
+            scale_presets = {
+                "1x": "3160",  # 3160/3160 = 1
+                "1.5x": "2107",  # 3160/2107 ≈ 1.5
+                "2x": "1580",  # 3160/1580 = 2
+                "2.5x": "1264",  # 3160/1264 = 2.5
+                "3x": "1053",  # 3160/1053 ≈ 3
+                "4x": "790",  # 3160/790 = 4
+                "5x": "632"   # 3160/632 = 5
+            }
+            
+            # 创建下拉菜单
+            def on_preset_select(event):
+                selected_text = preset_var.get()
+                if selected_text in scale_presets:
+                    self.inputs['scale'].delete(0, tk.END)
+                    self.inputs['scale'].insert(0, scale_presets[selected_text])
+            
+            preset_var = tk.StringVar()
+            preset_combo = ttk.Combobox(scale_frame, textvariable=preset_var, 
+                                      values=list(scale_presets.keys()), state="readonly")
+            preset_combo.pack(side="left", padx=10)
+            preset_combo.bind("<<ComboboxSelected>>", on_preset_select)
+            
+            # 标签
             ttk.Label(scale_frame, text="(实际倍数 = 3160 / 系数)", font=("", 8), foreground="gray").pack(side="left", padx=5)
+            
             add_row(2, "缩放系数:", scale_frame)
 
             # 持续时间 (仅Smooth)
@@ -294,10 +329,18 @@ class AzureArchiveTool:
             self.inputs['x'].insert(0, "0")
             self.inputs['y'] = ttk.Entry(coord_frame, width=8)
             self.inputs['y'].insert(0, "0")
+            
             ttk.Label(coord_frame, text="X:").pack(side="left")
             self.inputs['x'].pack(side="left", padx=2)
             ttk.Label(coord_frame, text="Y:").pack(side="left", padx=(10, 2))
             self.inputs['y'].pack(side="left", padx=2)
+            
+            # 添加坐标选择按钮
+            select_btn = ttk.Button(coord_frame, text="选择", 
+                                  command=lambda: self.open_coordinate_selector(self.inputs['x'], self.inputs['y'], 
+                                                                                is_center_aligned="居中" in self.inputs['align'].get()))
+            select_btn.pack(side="left", padx=10)
+            
             add_row(1, "坐标:", coord_frame)
 
             # 模式
@@ -436,7 +479,7 @@ class AzureArchiveTool:
 
         self.txt_dialogue = tk.Text(edit_frame, height=5, undo=True, font=("Microsoft YaHei", 12), wrap="word")
         self.txt_dialogue.grid(row=0, column=0, sticky="nsew")
-        self.txt_dialogue.insert("1.0", "在这里输入对话文本...")
+        self.txt_dialogue.insert("1.0", "在这里输入对话文本...\n使用下面功能前要先框选上面的文字(不框选也行会直接输出相关代码)\n这样会自动应用在这个文字上(点击功能后要重新框选, 下面的输入框不会影响到框选)\n这段文字可以直接使用Ctrl + A然后delete删掉")
         
         # 滚动条
         scrollbar = ttk.Scrollbar(edit_frame, command=self.txt_dialogue.yview)
@@ -486,14 +529,14 @@ class AzureArchiveTool:
         self.entry_size = ttk.Entry(color_frame, width=8)
         self.entry_size.insert(0, "60")
         self.entry_size.grid(row=1, column=1, sticky="ew", padx=2)
-        ToolTip(self.entry_size, "范围: 1-248\n超过这个范围的文本框已经无法显示需要使用屏幕文字\n示例文字, 在最大248刚好撑满整个聊天框不过后面三个点, 只会显示一个")
+        ToolTip(self.entry_size, "对话框的最大显示文字范围: 1-248\n超过这个范围的文本框已经无法显示需要使用屏幕文字\n示例文字, 在最大248刚好撑满整个聊天框不过后面三个点, 只会显示一个\n[!]这个范围是使用示例文字来测出的, 具体还是要根据你的文字数量决定")
         ttk.Button(color_frame, text="应用", width=4, command=self.apply_size).grid(row=1, column=3)
         
         # 透明度行
         ttk.Label(color_frame, text="透明:").grid(row=2, column=0)
         self.entry_alpha = ttk.Entry(color_frame, width=8)
         self.entry_alpha.grid(row=2, column=1, sticky="ew", padx=2)
-        ToolTip(self.entry_alpha, "范围: 00-99\n也可以使用 a-f + 0-9")
+        ToolTip(self.entry_alpha, "文字透明度\n范围: 00-99\n也可以使用 a-f + 0-9")
         ttk.Button(color_frame, text="应用", width=4, command=self.apply_alpha).grid(row=2, column=3)
 
         # 3. 高级与其他
@@ -504,6 +547,7 @@ class AzureArchiveTool:
         ttk.Label(adv_frame, text="注音:").grid(row=0, column=0)
         self.entry_ruby = ttk.Entry(adv_frame)
         self.entry_ruby.grid(row=0, column=1, sticky="ew", padx=2)
+        ToolTip(self.entry_ruby, "在指定文字上面添加说明或者备注")
         ttk.Button(adv_frame, text="应用", width=4, command=self.apply_ruby).grid(row=0, column=2)
 
         ttk.Separator(adv_frame, orient="horizontal").grid(row=1, column=0, columnspan=3, sticky="ew", pady=5)
@@ -550,27 +594,35 @@ class AzureArchiveTool:
 
     def apply_tag(self, tag):
         sel = self.get_selection()
-        if sel: self.replace_selection(f"[{tag}]{sel}[/{tag}]")
-        else: self.insert_text(f"[{tag}][/{tag}]")
+        if sel: 
+            self.replace_selection(f"[{tag}]{sel}[/{tag}]")
+        else: 
+            self.insert_text(f"[{tag}]占位文字[/{tag}]")
 
     def apply_color(self):
         color = self.entry_color.get()
         sel = self.get_selection()
-        if sel: self.replace_selection(f"[{color}]{sel}[-]")
-        else: self.insert_text(f"[{color}][-]")
+        if sel: 
+            self.replace_selection(f"[{color}]{sel}[-]")
+        else: 
+            self.insert_text(f"[{color}]占位文字[-]")
 
     def apply_size(self):
         size = self.entry_size.get()
         sel = self.get_selection()
-        if sel: self.replace_selection(f"[size={size}]{sel}[/size]")
-        else: self.insert_text(f"[size={size}][/size]")
+        if sel: 
+            self.replace_selection(f"[size={size}]{sel}[/size]")
+        else: 
+            self.insert_text(f"[size={size}]占位文字[/size]")
 
     def apply_ruby(self):
         ruby_text = self.entry_ruby.get()
         if not ruby_text: return
         sel = self.get_selection()
-        if sel: self.replace_selection(f"[ruby={ruby_text}]{sel}[/ruby]")
-        else: self.insert_text(f"[ruby={ruby_text}][/ruby]")
+        if sel: 
+            self.replace_selection(f"[ruby={ruby_text}]{sel}[/ruby]")
+        else: 
+            self.insert_text(f"[ruby={ruby_text}]占位文字[/ruby]")
             
     def apply_alpha(self):
         alpha = self.entry_alpha.get()
@@ -596,8 +648,10 @@ class AzureArchiveTool:
             messagebox.showwarning("警告", "请输入有效的值 (A-F + 0-9 或 00-99)")
             return
         sel = self.get_selection()
-        if sel: self.replace_selection(f"[{alpha}]{sel}")
-        else: self.insert_text(f"[{alpha}]")
+        if sel: 
+            self.replace_selection(f"[{alpha}]{sel}")
+        else: 
+            self.insert_text(f"[{alpha}]占位文字")
 
     def copy_to_clip(self, content):
         try:
@@ -1060,6 +1114,159 @@ class AzureArchiveTool:
             
             # 如果没有找到中文字体，使用系统默认字体
             self.font_family.set("sans-serif")
+
+    def open_coordinate_selector(self, x_entry, y_entry, is_center_aligned=True, invert_y=True, invert_x=False):
+        """打开坐标选择器"""
+        # 创建顶层窗口
+        selector = tk.Toplevel(self.root)
+        selector.title("坐标选择器")
+        selector.geometry("594x323")
+        selector.resizable(False, False)
+        
+        # 记录目标输入框和对齐方式
+        self.target_x_entry = x_entry
+        self.target_y_entry = y_entry
+        self.is_center_aligned = is_center_aligned
+        self.invert_y = invert_y
+        self.invert_x = invert_x
+        
+        # 创建画布
+        canvas = tk.Canvas(selector, width=594, height=323, bg="white", cursor="cross")
+        canvas.pack(fill="both", expand=True)
+        
+        # 绘制坐标系网格
+        for i in range(0, 594, 50):
+            canvas.create_line(i, 0, i, 323, fill="#e0e0e0", dash=(2, 2))
+        for i in range(0, 323, 50):
+            canvas.create_line(0, i, 594, i, fill="#e0e0e0", dash=(2, 2))
+        
+        # 绘制中心点
+        center_x, center_y = 297, 161.5
+        canvas.create_line(center_x - 10, center_y, center_x + 10, center_y, fill="#000000")
+        canvas.create_line(center_x, center_y - 10, center_x, center_y + 10, fill="#000000")
+        canvas.create_text(center_x, center_y - 15, text="(0,0)", font=("Arial", 10), fill="#000000")
+        
+        # 存储选择的坐标
+        selected_x = tk.DoubleVar(value=0)
+        selected_y = tk.DoubleVar(value=0)
+        
+        # 创建坐标显示标签
+        coord_label = tk.Label(selector, text="坐标: (0, 0)", font=("Arial", 10))
+        coord_label.pack(side="bottom", pady=5)
+        
+        # 鼠标按下事件
+        def on_mouse_down(event):
+            canvas.bind("<Motion>", on_mouse_move)
+            canvas.bind("<Leave>", on_mouse_leave)
+            update_coordinates(event)
+        
+        # 鼠标移动事件
+        def on_mouse_move(event):
+            update_coordinates(event)
+        
+        # 鼠标离开事件
+        def on_mouse_leave(event):
+            canvas.unbind("<Motion>")
+        
+        # 鼠标释放事件
+        def on_mouse_up(event):
+            canvas.unbind("<Motion>")
+            canvas.unbind("<Leave>")
+            # 自动确认选择
+            confirm_selection()
+        
+        # 更新坐标
+        def update_coordinates(event):
+            # 计算相对坐标（以中心为原点）
+            raw_x = event.x - center_x
+            # 根据需要决定是否反转x轴
+            if self.invert_x:
+                x = -raw_x  # 反转x轴，使左边为正，右边为负
+            else:
+                x = raw_x  # 不反转x轴，使右边为正，左边为负
+            
+            # 根据需要决定是否反转y轴
+            if self.invert_y:
+                y = center_y - event.y  # 反转y轴，使上方为正
+            else:
+                y = event.y - center_y  # 不反转y轴，使下方为正
+            
+            if self.is_center_aligned:
+                # 居中对齐(stm)：映射到实际应用坐标范围
+                # 左上角对应y=680(非全屏)750(全屏)，左边对应x=-1190
+                # 基于594x323画布，计算缩放比例
+                # 额外说明:
+                # 之所以是这个680这个坐标, 因为根据实际测试文字是不会被那个窗口栏挡住的
+                # 750这个坐标在非全屏模式下会被那个窗口栏挡住
+                # 这里测试的坐标数据用的是默认的60字体大小
+                # 假如说放到是100的字体, 需要使用z=-1000 y=650(非全屏)
+                # 显示在左上角的
+                # 这里的画布大小是参考编辑器中的这个预览窗口的大小
+                mapped_x = int((x / 297) * 1190)  # 左右范围映射到 -1190 到 1190
+                # Y轴：顶部对应750，底部对应-850
+                # 计算Y轴映射比例：(750 - (-850)) / 323 = 1600 / 323 ≈ 4.953
+                mapped_y = int(y * (1600 / 323))  # 上下范围映射到 -850 到 750
+            else:
+                # 左对齐(st)：映射到实际应用坐标范围
+                # 左上角对应y=750(全屏)，左边对应x=-1475
+                # 基于594x323画布，计算缩放比例
+                mapped_x = int((x / 297) * 1475)  # 左右范围映射到 -1475 到 1475
+                # Y轴：顶部对应750，底部对应-850
+                # 计算Y轴映射比例：(750 - (-850)) / 323 = 1600 / 323 ≈ 4.953
+                mapped_y = int(y * (1600 / 323))  # 上下范围映射到 -850 到 750
+            
+            # 更新变量
+            selected_x.set(mapped_x)
+            selected_y.set(mapped_y)
+            
+            # 更新标签
+            coord_label.config(text=f"坐标: ({mapped_x}, {mapped_y})")
+            
+            # 清除旧的标记
+            canvas.delete("marker")
+            
+            # 绘制新的标记
+            canvas.create_oval(event.x - 5, event.y - 5, event.x + 5, event.y + 5, 
+                             fill="#005A9E", outline="", tags="marker")
+            canvas.create_text(event.x + 15, event.y - 15, 
+                             text=f"({mapped_x}, {mapped_y})", 
+                             font=("Arial", 10), 
+                             fill="#005A9E", 
+                             tags="marker")
+        
+        # 绑定鼠标事件
+        canvas.bind("<Button-1>", on_mouse_down)
+        canvas.bind("<ButtonRelease-1>", on_mouse_up)
+        
+        # 确认按钮
+        def confirm_selection():
+            x_val = int(selected_x.get())
+            y_val = int(selected_y.get())
+            
+            # 更新输入框
+            if self.target_x_entry:
+                self.target_x_entry.delete(0, tk.END)
+                self.target_x_entry.insert(0, str(x_val))
+            if self.target_y_entry:
+                self.target_y_entry.delete(0, tk.END)
+                self.target_y_entry.insert(0, str(y_val))
+            
+            selector.destroy()
+        
+        # 取消按钮
+        def cancel_selection():
+            selector.destroy()
+        
+        # 创建按钮框架
+        button_frame = tk.Frame(selector)
+        button_frame.pack(side="bottom", pady=5)
+        
+        # 添加按钮
+        confirm_btn = ttk.Button(button_frame, text="确认", command=confirm_selection)
+        confirm_btn.pack(side="left", padx=10)
+        
+        cancel_btn = ttk.Button(button_frame, text="取消", command=cancel_selection)
+        cancel_btn.pack(side="left", padx=10)
 
 if __name__ == "__main__":
     root = tk.Tk()
